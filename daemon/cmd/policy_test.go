@@ -214,6 +214,9 @@ func (ds *DaemonSuite) prepareEndpoint(c *C, identity *identity.Identity, qa boo
 		testEndpointID = testQAEndpointID
 	}
 	e := endpoint.NewTestEndpointWithState(c, ds.d, ds.d, testipcache.NewMockIPCache(), ds.d.l7Proxy, ds.d.identityAllocator, testEndpointID, endpoint.StateWaitingForIdentity)
+	e.SetMetadataValue(endpoint.MetadataFakeEndpoint, false)
+	e.SetMetadataValue(endpoint.MetadataWithouteBPFDatapath, true)
+	e.SetMetadataValue(endpoint.MetadataSkipBPFPolicy, true)
 	if qa {
 		e.IPv6 = QAIPv6Addr
 		e.IPv4 = QAIPv4Addr

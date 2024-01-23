@@ -69,6 +69,24 @@ const (
 	resolveLabels   = "resolve-labels"
 )
 
+const (
+	// MetadataFakeEndpoint marks the endpoint as being "fake". By "fake" it
+	// means that it doesn't have any datapath bpf programs regenerated.
+	MetadataFakeEndpoint = "metadata-fake-endpoint"
+
+	// MetadataWithouteBPFDatapath marks the endpoint that doesn't contain a
+	// eBPF datapath program.
+	MetadataWithouteBPFDatapath = "metadata-without-bpf-endpoint"
+
+	// MetadataSkipBPFPolicy will mark the endpoint to skip ebpf
+	// policy regeneration.
+	MetadataSkipBPFPolicy = "metadata-skip-bpf-policy"
+
+	// MetadataSkipBPFRegeneration will mark the endpoint to skip ebpf
+	// regeneration.
+	MetadataSkipBPFRegeneration = "metadata-skip-bpf-regeneration"
+)
+
 var (
 	EndpointMutableOptionLibrary = option.GetEndpointMutableOptionLibrary()
 
@@ -385,6 +403,9 @@ type Endpoint struct {
 	// mutable! must hold the endpoint lock to read
 	ciliumEndpointUID k8sTypes.UID
 
+	// metadata is used to store some internal metadata about this Endpoint.
+	metadata map[string]interface{}
+
 	// Root scope for all of this endpoints reporters.
 	reporterScope       cell.Scope
 	closeHealthReporter func()
@@ -514,6 +535,7 @@ func (e *Endpoint) waitForProxyCompletions(proxyWaitGroup *completion.WaitGroup)
 func NewTestEndpointWithState(_ testing.TB, owner regeneration.Owner, policyGetter policyRepoGetter, namedPortsGetter namedPortsGetter, proxy EndpointProxy, allocator cache.IdentityAllocator, ID uint16, state State) *Endpoint {
 	endpointQueueName := "endpoint-" + strconv.FormatUint(uint64(ID), 10)
 	ep := createEndpoint(owner, policyGetter, namedPortsGetter, proxy, allocator, ID, "")
+	ep.SetMetadataValue(MetadataFakeEndpoint, true)
 	ep.state = state
 	ep.eventQueue = eventqueue.NewEventQueueBuffered(endpointQueueName, option.Config.EndpointQueueSize)
 
@@ -546,6 +568,7 @@ func createEndpoint(owner regeneration.Owner, policyGetter policyRepoGetter, nam
 		allocator:        allocator,
 		logLimiter:       logging.NewLimiter(10*time.Second, 3), // 1 log / 10 secs, burst of 3
 		noTrackPort:      0,
+		metadata:         map[string]interface{}{},
 	}
 
 	ep.initDNSHistoryTrigger()
@@ -580,6 +603,9 @@ func CreateIngressEndpoint(owner regeneration.Owner, policyGetter policyRepoGett
 	ep.DatapathConfiguration = NewDatapathConfiguration()
 
 	ep.isIngress = true
+	ep.metadata[MetadataSkipBPFPolicy] = true
+	ep.metadata[MetadataWithouteBPFDatapath] = true
+
 	// node.GetIngressIPv4 has been parsed with net.ParseIP() and may be in IPv4 mapped IPv6
 	// address format. Use ippkg.AddrFromIP() to make sure we get a plain IPv4 address.
 	ep.IPv4, _ = ippkg.AddrFromIP(node.GetIngressIPv4())
@@ -1210,7 +1236,7 @@ type DeleteConfig struct {
 func (e *Endpoint) leaveLocked(proxyWaitGroup *completion.WaitGroup, conf DeleteConfig) []error {
 	errors := []error{}
 
-	if !option.Config.DryMode {
+	if !e.isMetadata(MetadataFakeEndpoint) {
 		e.owner.Datapath().Loader().Unload(e.createEpInfoCache(""))
 	}
 
@@ -1265,7 +1291,7 @@ func (e *Endpoint) leaveLocked(proxyWaitGroup *completion.WaitGroup, conf Delete
 
 	if e.ConntrackLocalLocked() {
 		ctmap.CloseLocalMaps(e.conntrackName())
-	} else if !option.Config.DryMode {
+	} else if !e.isMetadata(MetadataFakeEndpoint) {
 		e.scrubIPsInConntrackTableLocked()
 	}
 
@@ -2404,7 +2430,7 @@ func (e *Endpoint) Delete(conf DeleteConfig) []error {
 	e.setState(StateDisconnecting, "Deleting endpoint")
 
 	// If dry mode is enabled, no changes to BPF maps are performed
-	if !option.Config.DryMode {
+	if !e.isMetadata(MetadataFakeEndpoint) {
 		if errs2 := lxcmap.DeleteElement(e); errs2 != nil {
 			errs = append(errs, errs2...)
 		}
@@ -2544,4 +2570,38 @@ func (e *Endpoint) setDefaultPolicyConfig() {
 // GetCreatedAt returns the endpoint creation time.
 func (e *Endpoint) GetCreatedAt() time.Time {
 	return e.createdAt
+}
+
+// GetMetadataValue returns the metadata value for this key.
+func (e *Endpoint) GetMetadataValue(key string) interface{} {
+	e.mutex.RWMutex.RLock()
+	defer e.mutex.RWMutex.RUnlock()
+	return e.metadata[key]
+}
+
+// SetMetadataValue sets the metadata value for this key.
+func (e *Endpoint) SetMetadataValue(key string, value interface{}) interface{} {
+	e.mutex.RWMutex.Lock()
+	defer e.mutex.RWMutex.Unlock()
+	old := e.metadata[key]
+	e.metadata[key] = value
+	return old
+}
+
+// IsMetadata checks if the value of the metadata map is set, it's a boolean and
+// its value is 'true'.
+func (e *Endpoint) IsMetadata(metadataKey string) bool {
+	e.mutex.RWMutex.RLock()
+	defer e.mutex.RWMutex.RUnlock()
+	return e.isMetadata(metadataKey)
+}
+
+// isMetadata checks if the value of the metadata map is set, it's a boolean and
+// its value is 'true'.
+func (e *Endpoint) isMetadata(metadataKey string) bool {
+	if v, ok := e.metadata[metadataKey]; ok {
+		isSet, ok := v.(bool)
+		return ok && isSet
+	}
+	return false
 }

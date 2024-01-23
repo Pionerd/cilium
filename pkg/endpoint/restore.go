@@ -405,6 +405,7 @@ func (e *Endpoint) toSerializedEndpoint() *serializableEndpoint {
 		K8sNamespace:             e.K8sNamespace,
 		DatapathConfiguration:    e.DatapathConfiguration,
 		CiliumEndpointUID:        e.ciliumEndpointUID,
+		Metadata:                 e.metadata,
 	}
 }
 
@@ -510,6 +511,9 @@ type serializableEndpoint struct {
 	// This is used to avoid overwriting/deleting ciliumendpoints that are managed
 	// by other endpoints.
 	CiliumEndpointUID types.UID
+
+	// Metadata is used to store some internal metadata about this Endpoint.
+	Metadata map[string]interface{}
 }
 
 // UnmarshalJSON expects that the contents of `raw` are a serializableEndpoint,
@@ -562,4 +566,9 @@ func (ep *Endpoint) fromSerializedEndpoint(r *serializableEndpoint) {
 	ep.DatapathConfiguration = r.DatapathConfiguration
 	ep.Options = r.Options
 	ep.ciliumEndpointUID = r.CiliumEndpointUID
+	if r.Metadata != nil {
+		ep.metadata = r.Metadata
+	} else {
+		ep.metadata = map[string]interface{}{}
+	}
 }

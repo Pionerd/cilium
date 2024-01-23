@@ -73,6 +73,9 @@ type EndpointChangeRequest struct {
 	// MAC address
 	Mac string `json:"mac,omitempty"`
 
+	// Metadata used to store information about the endpoint at creation. Useful for tests.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+
 	// Process ID of the workload belonging to this endpoint
 	Pid int64 `json:"pid,omitempty"`
 

@@ -48,8 +48,7 @@ var (
 
 // HasBPFPolicyMap returns true if policy map changes should be collected
 func (e *Endpoint) HasBPFPolicyMap() bool {
-	// Ingress Endpoint has no policy maps
-	return !e.isIngress
+	return !e.IsMetadata(MetadataSkipBPFPolicy)
 }
 
 // GetNamedPort returns the port for the given name.
@@ -542,7 +541,7 @@ func (e *Endpoint) updateRealizedState(stats *regenerationStatistics, origDir st
 
 	// Start periodic background full reconciliation of the policy map.
 	// Does nothing if it has already been started.
-	if !option.Config.DryMode {
+	if !e.isMetadata(MetadataFakeEndpoint) {
 		e.startSyncPolicyMapController()
 	}
 

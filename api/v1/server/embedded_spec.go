@@ -2942,6 +2942,12 @@ func init() {
           "description": "MAC address",
           "type": "string"
         },
+        "metadata": {
+          "description": "Metadata used to store information about the endpoint at creation. Useful for tests.",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
         "pid": {
           "description": "Process ID of the workload belonging to this endpoint",
           "type": "integer"
@@ -8808,6 +8814,12 @@ func init() {
         "mac": {
           "description": "MAC address",
           "type": "string"
+        },
+        "metadata": {
+          "description": "Metadata used to store information about the endpoint at creation. Useful for tests.",
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "pid": {
           "description": "Process ID of the workload belonging to this endpoint",

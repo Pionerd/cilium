@@ -102,7 +102,7 @@ func (d *Daemon) checkEndpointBPFPrograms(ctx context.Context, p epBPFProgWatchd
 		if ep.GetState() != endpoint.StateReady {
 			continue
 		}
-		if !ep.HasBPFPolicyMap() {
+		if ep.IsMetadata(endpoint.MetadataWithouteBPFDatapath) {
 			// Skip Endpoints without BPF datapath
 			continue
 		}
