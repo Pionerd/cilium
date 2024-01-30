@@ -73,19 +73,22 @@ jobs:
       matrix:
         include:
           # renovate: datasource=docker depName=quay.io/lvh-images/kind
-          - kernel: '4.19-20240110.080621'
+          - kernel: '4.19-20240126.145209'
             ci-kernel: '419'
           # renovate: datasource=docker depName=quay.io/lvh-images/kind
-          - kernel: '5.4-20240110.080621'
+          - kernel: '5.4-20240126.145209'
             ci-kernel: '54'
           # renovate: datasource=docker depName=quay.io/lvh-images/kind
-          - kernel: '5.10-20240110.080621'
+          - kernel: 'rhel8-20240126.145209'
+            ci-kernel: '54'
+          # renovate: datasource=docker depName=quay.io/lvh-images/kind
+          - kernel: '5.10-20240126.145209'
             ci-kernel: '510'
           # renovate: datasource=docker depName=quay.io/lvh-images/kind
-          - kernel: '5.15-20240110.080621'
+          - kernel: '5.15-20240126.145209'
             ci-kernel: '510'
           # renovate: datasource=docker depName=quay.io/lvh-images/kind
-          - kernel: '6.1-20240110.080621'
+          - kernel: '6.1-20240126.145209'
             ci-kernel: '61'
           # renovate: datasource=docker depName=quay.io/lvh-images/kind
           - kernel: 'bpf-next-20240122.013132'
@@ -101,7 +104,7 @@ jobs:
           persist-credentials: false
 
       - name: Provision LVH VMs
-        uses: cilium/little-vm-helper@8410a93e544b7e180a2365e5fdab0724a39bc02a # v0.0.13
+        uses: cilium/little-vm-helper@25815b849fdbefd900e82a31a6093c24f18cbb54 # v0.0.15
         with:
           test-name: datapath-bpf-complexity
           image: 'complexity-test'
@@ -120,7 +123,7 @@ jobs:
             go${{ env.go-version }} download
 
       - name: Run verifier tests
-        uses: cilium/little-vm-helper@8410a93e544b7e180a2365e5fdab0724a39bc02a # v0.0.13
+        uses: cilium/little-vm-helper@25815b849fdbefd900e82a31a6093c24f18cbb54 # v0.0.15
         with:
           provision: 'false'
           cmd: |
@@ -130,7 +133,7 @@ jobs:
 
       - name: Fetch artifacts
         if: ${{ !success() }}
-        uses: cilium/little-vm-helper@8410a93e544b7e180a2365e5fdab0724a39bc02a # v0.0.13
+        uses: cilium/little-vm-helper@25815b849fdbefd900e82a31a6093c24f18cbb54 # v0.0.15
         with:
           provision: 'false'
           cmd: |
